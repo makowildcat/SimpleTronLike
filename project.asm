@@ -22,18 +22,16 @@ INT 10h
 affichage:
 	MOV AH, 0Ch
 	MOV AL, 4
-	mov CX, 50
+	mov CX, 0
 	mov DX, 50
 	int 10h
-;trait:
- ;       inc AL
-  ;      inc CX
-   ;     inc DX
-    ;    int 10h
-     ;   cmp DX, 100
-      ;  jne trait
-		
-; boucle de dessin
+	
+trait:
+	inc AL
+	inc CX
+	int 10h
+	cmp CX, 300
+	jne trait
 
 ; init variable
 MOV mode, 01h
@@ -115,6 +113,7 @@ readChar:
 ; *** Sub ReadPxl ***
 readPxl:
 	MOV AH,0Dh
+	RET
 	
 ; *** Sub EchoChar ***
 Echochar:
