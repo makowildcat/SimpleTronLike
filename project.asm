@@ -12,6 +12,7 @@ data 	SEGMENT public
 	dirX	DW	1
 	dirY	DW	1
 	delay 	DW 	1024
+	exColor DB 	0
 data 	ENDS
 
 code    SEGMENT public
@@ -22,21 +23,7 @@ MOV AL, 13h
 MOV AH, 0
 INT 10h
 
-; MOV AH, 0Ch
 JMP initVar 
-
-;**** Sub ReadChar *****
-; readChar:
-	; mov AH, 07h
-	; int 21H
-	; MOV AH, 01h
-	; INT 16h
-	; RET
-
-; *** Sub ReadPxl ***
-; readPxl:
-	; MOV AH, 0Dh
-	; RET
 	
 ; *** Sub EchoChar ***
 ; Echochar:
@@ -47,47 +34,80 @@ JMP initVar
 	
 ; *** Sub PutPxl ***
 PutPxl:
-	mov AH, 0Ch
-	mov AL, color
-	int 10h
+	MOV AH, 0Ch
+	MOV AL, color
+	INT 10h
+	RET
+	
+; *** Sub ReadPxl ***
+fReadPxl:
+	MOV AH, 0Dh
+	INT 10h
+	MOV exColor, AL
+	RET
+	
+fInitGrid:
+	MOV AH, 0Ch
+	MOV AL, 148
+	MOV CX, 10
+	MOV DX, 10
+	INT 10h
+	lineH:
+		INC CX
+		INT 10h
+		CMP CX, 310
+		JNE lineH
+		ADD DX, 10
+		MOV CX, 9
+		CMP DX, 200
+		JNE lineH
+		
+	MOV DX, 9
+	MOV CX, 10
+	lineV:
+		INC DX
+		INT 10h
+		CMP DX, 190
+		JNE lineV
+		ADD CX, 10
+		MOV DX, 9
+		CMP CX, 320
+		JNE lineV
 	RET
 
-; *** Sub RmvPxl ***
-; RmvPxl:
-	; mov AH, 0Ch
-	; mov BL , AL
-	; mov AL, 0		; black color
-	; int 10h
-	; mov AL, BL
-	; RET
-
-; screenReset:
-	; MOV AH, 0Ch
-	; MOV AL, 0
-	; MOV CX, 0
-	; MOV DX, 0
-; loopScreenReset:
-	; int 10h
-	; INC CX
-	; CMP CX, 320
-	; jne loopScreenReset
-	; MOV CX, 0
-	; INC DX
-	; CMP DX, 200
-	; jne loopScreenReset	
-	; MOV CX, 32
-	; MOV DX, 32
-	; MOV AL, 15
+fCleanScreen:
+	MOV AH, 0Ch
+	MOV AL, 0
+	MOV CX, 0
+	MOV DX, 0
+	loopScreenReset:
+		int 10h
+		INC CX
+		CMP CX, 320
+		jne loopScreenReset
+		MOV CX, 0
+		INC DX
+		CMP DX, 200
+		jne loopScreenReset	
+		MOV CX, 32
+		MOV DX, 32
+		MOV AL, 15
+	RET
 
 updateData proc
 	CMP mode, 1
 	JE rainbow
 	CMP mode, 2
-	JNE noClear
-	MOV AH, 0Ch
-	MOV AL, 0
-	INT 10h
-	JMP noClear
+	JE cursor
+	CMP mode, 3
+	JE erase
+	erase:
+		MOV exColor, 0
+	cursor:
+		MOV AL, exColor
+		MOV AH, 0Ch
+		INT 10h
+		JMP noClear		
 	rainbow:
 		CMP color, 54
 		JNG upColor
@@ -95,17 +115,16 @@ updateData proc
 		upColor:
 			INC color
 	noClear:
-		MOV AH, 0Ch
-		MOV AL, color
 		ADD CX, dirX
 		ADD DX, dirY
-		INT 10h
+		CALL fReadPxl
+		CALL PutPxl
 		CMP autoRun, 1
 		JE yes_autoRun
 		MOV dirX, 0
 		MOV dirY, 0
 		yes_autoRun:
-			RET
+	RET
 updateData endp
 
 initVar:
@@ -116,6 +135,7 @@ MOV dirY, 0
 MOV autoRun, 0
 MOV mode, 1
 MOV color, 64
+MOV exColor, 0
 
 mainLoop:
 	CALL handleKeyBoard
@@ -130,31 +150,31 @@ mainLoop:
 
 NLeft:
 	CMP dirX, 0		; test to avoid way back
-	JNE putPixel
+	JNE mainLoop
 	MOV dirX, -1
 	MOV dirY, 0
-	JMP putPixel
+	JMP mainLoop
 NRight:
 	CMP dirX, 0
-	JNE putPixel
+	JNE mainLoop
 	MOV dirX, 1
 	MOV dirY, 0
-	JMP putPixel
+	JMP mainLoop
 NUp:
 	CMP dirY, 0
-	JNE	putPixel
+	JNE	mainLoop
 	MOV dirX, 0
 	MOV dirY, -1
-	JMP putPixel
+	JMP mainLoop
 NDown:
 	CMP dirY, 0
-	JNE putPixel
+	JNE mainLoop
 	MOV dirX, 0
 	MOV dirY, 1
-	JMP putPixel
+	JMP mainLoop
 
 putPixel:
-	CALL PutPxl
+	; CALL PutPxl
 	JMP mainLoop
 	
 handleKeyBoard proc
@@ -183,6 +203,10 @@ handleKeyBoard proc
 		JE endProgram
 		CMP AL, "g"
 		JE initGrid
+		CMP AL, "s"
+		JE cleanScreen
+		CMP AL, "e"
+		JE eraseMode
 	notPressed:
 	
 	RET
@@ -204,39 +228,19 @@ rainbowMode:
 cursorMode:
 	MOV mode, 2
 	JMP putPixel
-
-; intermediateJump:
-	
-	; JMP endProgram
 	
 initGrid:
-	mov AH, 0Ch
-	MOV AL, 148
-	mov CX, 10
-	mov DX, 10
-	int 10h
-	lineH:
-		inc CX
-		int 10h
-		cmp CX, 310
-		jne lineH
-		ADD DX, 10
-		MOV CX, 9
-		cmp DX, 200
-		jne lineH
-		
-	MOV DX, 9
-	MOV CX, 10
-	lineV:
-		INC DX
-		int 10h
-		CMP DX, 190
-		jne lineV
-		ADD CX, 10
-		MOV DX, 9
-		CMP CX, 320
-		jne lineV
+	CALL fInitGrid
 	JMP putPixel
+	
+cleanScreen:
+	CALL fCleanScreen
+	JMP putPixel
+
+eraseMode:
+	MOV color, 15
+	MOV mode, 3
+	JMP PutPxl
 	
 ; *** EXIT ***
 endProgram:
