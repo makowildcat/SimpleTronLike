@@ -4,7 +4,7 @@ SimpleTronLike
 A simple Tron Game in Assembly - 80x86 (just for fun and learn)
 Use DOSBox to run it
 
-# Press
+### Press Key :
 * "q" to quit
 * "a" toggle AutoRun
 * "s" clean screen
