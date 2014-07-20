@@ -7,7 +7,10 @@ pile    ENDS
 
 data 	SEGMENT public		
 	mode 	DW	01h
-	color 	DB	04h	
+	color 	DB	04h
+	dirX	DB	1
+	dirY	DB	1
+	delay 	DW 	1024
 data 	ENDS
 
 code    SEGMENT public
@@ -79,16 +82,18 @@ loopScreenReset:
 	MOV DX, 32
 	MOV AL, 15
 	
-mainLoop:
-	; MOV AH, 01h 	; just check if a key is pressed
-	; INT 16h
-	; JZ updateData	; if not we continue
-	; handleChar
+MOV CX, 0
+MOV DX, 0
 	
-    ; updateData:
-	; INC CX
-	; INC DX
+mainLoop:
 	CALL handleKeyBoard
+	CALL updateData
+	
+	MOV delay, 32768
+	loopDelay:
+		DEC delay
+		JNZ loopDelay
+		
 	JMP mainLoop
 
 handleKeyBoard proc
@@ -112,7 +117,16 @@ handleKeyBoard proc
 	no_:
 	
 	RET
-handleKeyBoard endp	
+handleKeyBoard endp
+
+updateData proc
+	MOV AH, 0Ch
+	MOV AL, color
+	INC CX
+	INC DX
+	INT 10h
+	RET
+updateData endp
 
 ; HandleMode:
 	; CMP mode, 01h
