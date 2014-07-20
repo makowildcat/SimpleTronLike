@@ -43,12 +43,29 @@ PutPxl:
 fReadPxl:
 	MOV AH, 0Dh
 	INT 10h
+	CMP dirX, 0
+	JNE withExColor
+	CMP dirY, 0
+	JE withOutExColor 
+	withExColor:
 	MOV exColor, AL
+	withOutExColor:
+	RET
+	
+fCheckCollision:
+	MOV BX, 0
+	CMP exColor, 0
+	JE no_collision
+	CMP exColor, 52
+	JE no_collision
+	yes_collision:
+	MOV BX, 1
+	no_collision:
 	RET
 	
 fInitGrid:
 	MOV AH, 0Ch
-	MOV AL, 148
+	MOV AL, 52 ;148
 	MOV CX, 10
 	MOV DX, 10
 	INT 10h
@@ -132,7 +149,7 @@ MOV CX, 50
 MOV DX, 50
 MOV dirX, 1
 MOV dirY, 0
-MOV autoRun, 0
+MOV autoRun, 1
 MOV mode, 1
 MOV color, 64
 MOV exColor, 0
@@ -140,6 +157,9 @@ MOV exColor, 0
 mainLoop:
 	CALL handleKeyBoard
 	CALL updateData
+	CALL fCheckCollision
+	CMP BX, 1
+	JE collision
 	
 	MOV delay, 32768
 	loopDelay:
@@ -173,8 +193,10 @@ NDown:
 	MOV dirY, 1
 	JMP mainLoop
 
+collision:
+	JMP cleanScreen
+	
 putPixel:
-	; CALL PutPxl
 	JMP mainLoop
 	
 handleKeyBoard proc
