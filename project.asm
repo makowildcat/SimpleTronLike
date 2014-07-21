@@ -6,57 +6,102 @@ pile    SEGMENT stack
 pile    ENDS
 
 data 	SEGMENT public		
-	mode 	DW	01h
-	autoRun	DB	1
-	color 	DB	04h
-	dirX	DW	1
-	dirY	DW	1
-	delay 	DW 	1024
-	exColor DB 	0
+	mode 	DB	0
+	autoRun	DB	0
+	delay 	DW 	0
+	color1 	DB	0
+	exCol1  DB  0
+	dirX1	DW	0
+	dirY1	DW	0
 data 	ENDS
+
+;*****************************************************************************;
+;** FEW TESTS // and failed :( don't know why I can't add more variable without
+;** getting some strange effects like freezing when I quite
+; datap1	SEGMENT public			
+	; posX1	DW 	0
+	; posY1 	DW 	0
+; datap1 	ENDS
+; datap2	SEGMENT public		
+	; color2 	DB	0
+	; exCol2  DB 	0
+	; dirX2	DW	0
+	; dirY2	DW	0
+	; posX2	DW 	0
+	; posY2 	DW 	0
+; datap2 	ENDS
+; dataAll 	group 	data, datap1
+;*****************************************************************************;
 
 code    SEGMENT public
 assume  cs:code,ds:data,es:code,ss:pile
+; assume	ds:datap1
+; assume 	ds:datap2
 
 ; graphic mode
 MOV AL, 13h
 MOV AH, 0
 INT 10h
 
-JMP initVar 
+MOV CX, 50
+MOV DX, 50
+; MOV posX1, 30
+; MOV posY1, 30
+MOV dirX1, 1
+MOV dirY1, 0
+MOV exCol1, 0
+MOV autoRun, 1
+MOV mode, 1
+MOV color1, 64
+
+; MOV	dirX2, 0
+; MOV	dirY2, 0
+; MOV	exCol2, 0
+; MOV color2, 14
+; MOV posX2, 180
+; MOV	posY2, 100
 	
-; *** Sub EchoChar ***
-; Echochar:
-	; MOV AH, 02
-	; MOV DL,AL
-	; INT 21H
-	; RET
+JMP mainLoop 
 	
 ; *** Sub PutPxl ***
 PutPxl:
 	MOV AH, 0Ch
-	MOV AL, color
+	; MOV CX, posX1
+	; MOV DX, posY1
+	MOV AL, color1
 	INT 10h
+	; MOV CX, posX2
+	; MOV DX, posY2
+	; MOV AL, color2
+	; INT 10h
 	RET
 	
 ; *** Sub ReadPxl ***
 fReadPxl:
 	MOV AH, 0Dh
 	INT 10h
-	CMP dirX, 0
+	CMP dirX1, 0
 	JNE withExColor
-	CMP dirY, 0
+	CMP dirY1, 0
 	JE withOutExColor 
 	withExColor:
-	MOV exColor, AL
+	MOV exCol1, AL
 	withOutExColor:
 	RET
 	
 fCheckCollision:
 	MOV BX, 0
-	CMP exColor, 0
+	CMP CX, 10 ;CMP posX1, 10
+	JNG yes_collision
+	CMP DX, 10 ;CMP posY1, 10
+	JNG yes_collision
+	CMP CX, 309 ;CMP posX1, 309
+	JG yes_collision
+	CMP DX, 189 ;CMP posY1, 189
+	JG yes_collision	
+	CMP exCol1, 0
 	JE no_collision
-	CMP exColor, 52
+	CMP exCol1, 52
 	JE no_collision
 	yes_collision:
 	MOV BX, 1
@@ -90,6 +135,10 @@ fInitGrid:
 		MOV DX, 9
 		CMP CX, 320
 		JNE lineV
+		
+	MOV CX, 100
+	MOV DX, 95
+	MOV AL, 15
 	RET
 
 fCleanScreen:
@@ -118,41 +167,38 @@ updateData proc
 	JE cursor
 	CMP mode, 3
 	JE erase
+	CMP mode, 4
+	JE noClear
 	erase:
-		MOV exColor, 0
+		MOV exCol1, 0
 	cursor:
-		MOV AL, exColor
+		MOV AL, exCol1
 		MOV AH, 0Ch
 		INT 10h
 		JMP noClear		
 	rainbow:
-		CMP color, 54
+		CMP color1, 54
 		JNG upColor
-		MOV color, 31
+		MOV color1, 31
 		upColor:
-			INC color
+			INC color1
 	noClear:
-		ADD CX, dirX
-		ADD DX, dirY
+		; MOV CX, posX1
+		ADD CX, dirX1
+		; MOV posX1, CX
+		; MOV DX, posY1
+		ADD DX, dirY1
+		; MOV posY1, DX
 		CALL fReadPxl
 		CALL PutPxl
 		CMP autoRun, 1
 		JE yes_autoRun
-		MOV dirX, 0
-		MOV dirY, 0
+		MOV dirX1, 0
+		MOV dirY1, 0
 		yes_autoRun:
+		
 	RET
 updateData endp
-
-initVar:
-MOV CX, 50
-MOV DX, 50
-MOV dirX, 1
-MOV dirY, 0
-MOV autoRun, 1
-MOV mode, 1
-MOV color, 64
-MOV exColor, 0
 
 mainLoop:
 	CALL handleKeyBoard
@@ -169,35 +215,36 @@ mainLoop:
 	JMP mainLoop
 
 NLeft:
-	CMP dirX, 0		; test to avoid way back
+	CMP dirX1, 0		; test to avoid way back
 	JNE mainLoop
-	MOV dirX, -1
-	MOV dirY, 0
+	MOV dirX1, -1
+	MOV dirY1, 0
 	JMP mainLoop
 NRight:
-	CMP dirX, 0
+	CMP dirX1, 0		; idem
 	JNE mainLoop
-	MOV dirX, 1
-	MOV dirY, 0
+	MOV dirX1, 1
+	MOV dirY1, 0
 	JMP mainLoop
 NUp:
-	CMP dirY, 0
+	CMP dirY1, 0		; ...
 	JNE	mainLoop
-	MOV dirX, 0
-	MOV dirY, -1
+	MOV dirX1, 0
+	MOV dirY1, -1
 	JMP mainLoop
 NDown:
-	CMP dirY, 0
+	CMP dirY1, 0
 	JNE mainLoop
-	MOV dirX, 0
-	MOV dirY, 1
+	MOV dirX1, 0
+	MOV dirY1, 1
 	JMP mainLoop
-
-collision:
-	JMP cleanScreen
 	
 putPixel:
 	JMP mainLoop
+	
+collision:
+	CMP mode, 4
+	JE cleanScreen
 	
 handleKeyBoard proc
 	MOV AH, 01h		; just to check if a key is pressed
@@ -221,16 +268,17 @@ handleKeyBoard proc
 		JE rainbowMode
 		CMP AL, "c"
 		JE cursorMode
-		CMP AL, "q"
-		JE endProgram
 		CMP AL, "g"
 		JE initGrid
 		CMP AL, "s"
 		JE cleanScreen
 		CMP AL, "e"
 		JE eraseMode
+		CMP AL, "t"
+		JE traceMode
+		CMP AL, "q"
+		JE endProgram
 	notPressed:
-	
 	RET
 handleKeyBoard endp
 	
@@ -242,6 +290,10 @@ toggleAutoRun:
 	switch:
 		MOV autoRun, 1
 	JMP putPixel
+
+cleanScreen:
+	CALL fCleanScreen
+	JMP putPixel
 	
 rainbowMode:
 	MOV mode, 1
@@ -252,16 +304,21 @@ cursorMode:
 	JMP putPixel
 	
 initGrid:
-	CALL fInitGrid
-	JMP putPixel
-	
-cleanScreen:
 	CALL fCleanScreen
-	JMP putPixel
+	CALL fInitGrid
+	MOV dirX1, 1
+	MOV dirY1, 0
+	MOV color1, 14
+	MOV autoRun, 1
+	JMP traceMode
 
 eraseMode:
-	MOV color, 15
+	MOV color1, 15
 	MOV mode, 3
+	JMP PutPxl
+	
+traceMode:
+	MOV mode, 4
 	JMP PutPxl
 	
 ; *** EXIT ***
