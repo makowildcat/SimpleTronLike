@@ -1,3 +1,5 @@
+; warning this program make it freeze DOSBox, but don't know why ? 
+
 pile    SEGMENT stack
 pile    ENDS
 
@@ -10,7 +12,7 @@ data 	SEGMENT public
 	posX	DW 	?
 	posY 	DW 	?
 	color 	DB	?
-	exCol  	DB  ?
+	exCol  	DB  	?
 	dirX	DW	?
 	dirY	DW	?
 
