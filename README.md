@@ -11,6 +11,7 @@ Use DOSBox to run it
 * "e" switch to Erase mode
 * "c" switch to Cursor mode
 * "r" switch to Rainbow mode
+* "t" switch to Trace mode
 * "g" init Grid and start game
 
 Use narrow keys (up, down, left and right) to move.
